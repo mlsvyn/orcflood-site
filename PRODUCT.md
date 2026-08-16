@@ -29,7 +29,7 @@ live, badges read "coming soon" (swap to official store badges at launch).
   Its name never appears in our domain or store metadata.
 - No third-party requests (no webfont CDNs, no analytics) — GDPR-clean,
   self-hosted assets only.
-- Contact: yrnrmlsv@gmail.com. Developer / studio name: CindrPeak (Yernur Melsov, solo).
+- Contact: yrnrmlsv@gmail.com. Developer: Yernur Melsov (solo).
 
 **Brand commitments.** The store-poster identity is established brand:
 powder-black ground #141118, signal green #a6dc30, muster gold #c49c48,
