@@ -1,0 +1,21 @@
+# orcflood.com — everyone is welcome, including AI search crawlers.
+User-agent: *
+Allow: /
+
+# Retrieval bots that power AI answers — explicitly allowed.
+User-agent: OAI-SearchBot
+Allow: /
+User-agent: ChatGPT-User
+Allow: /
+User-agent: GPTBot
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+User-agent: ClaudeBot
+Allow: /
+User-agent: Google-Extended
+Allow: /
+User-agent: Bingbot
+Allow: /
+
+Sitemap: https://www.orcflood.com/sitemap.xml

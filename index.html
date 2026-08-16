@@ -1,50 +1,266 @@
 <!DOCTYPE html>
+<!--
+THESIS: the page IS the flood — a live tide of orcs pressed against a thin
+firing line, not a hero claim over feature cards.
+OWN-WORLD: powder black #141118, signal green #a6dc30 owning bands/actions,
+muster gold captions, munitions-stencil display (Big Shoulders Stencil 900),
+pixel game icons, real captured screenshots. Recognizable with copy removed.
+STORY: visitor watches the tide, reads "one relentless tide, not waves",
+scrolls a field report of real numbers, taps a store button.
+FIRST VIEWPORT: full-bleed canvas horde flowing right-to-left into a gold
+firing line just past centre; stencil THE FLOOD IS COMING over the dark
+left vignette; sub + two store buttons below; live orc counter bar at bottom.
+FORM: war-office field report in the store-poster identity (brand canon).
+-->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Orc Flood: Tower Defense</title>
-  <meta name="description" content="A pixel tower defense where the horde is not waves — it is one relentless tide. Hold the line against 160,000 orcs.">
-  <link rel="icon" href="img/icon.png">
-  <link rel="stylesheet" href="css/style.css">
+  <title>Orc Flood: Tower Defense — 160,000 orcs, one line of defense</title>
+  <meta name="description" content="A premium pixel tower defense for iOS and Android where the horde is one relentless simulated tide — 160,000 orcs, 7 towers you aim yourself, no ads, fully offline.">
+  <link rel="canonical" href="https://www.orcflood.com/">
+  <link rel="icon" href="img/icon64.png">
+  <link rel="apple-touch-icon" href="img/icon192.png">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Orc Flood">
+  <meta property="og:title" content="Orc Flood: Tower Defense">
+  <meta property="og:description" content="The horde is not waves — it is one relentless tide. 160,000 orcs, 7 towers, no ads, fully offline. Coming to iOS and Android.">
+  <meta property="og:url" content="https://www.orcflood.com/">
+  <meta property="og:image" content="https://www.orcflood.com/img/og.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="fonts/BigShouldersStencil-900.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/site.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": ["VideoGame", "MobileApplication"],
+        "name": "Orc Flood: Tower Defense",
+        "alternateName": "Orc Flood",
+        "url": "https://www.orcflood.com/",
+        "image": "https://www.orcflood.com/img/og.jpg",
+        "description": "A premium pixel tower defense for iOS and Android where the horde is one relentless simulated tide — up to 160,000 orcs per campaign, 7 towers you place and aim yourself, 4 battlefield abilities, a 152-node upgrade tree. No ads, no accounts, fully offline.",
+        "genre": ["Tower Defense", "Strategy"],
+        "gamePlatform": ["iOS", "Android"],
+        "operatingSystem": ["iOS", "Android"],
+        "applicationCategory": "GameApplication",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "author": { "@type": "Person", "name": "Yernur Melsov", "email": "mailto:yrnrmlsv@gmail.com" },
+        "playMode": "SinglePlayer"
+      },
+      {
+        "@type": "Organization",
+        "name": "Orc Flood",
+        "url": "https://www.orcflood.com/",
+        "logo": "https://www.orcflood.com/img/icon192.png",
+        "email": "mailto:yrnrmlsv@gmail.com"
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
-  <header class="site">
+  <header class="site-head">
     <div class="wrap">
-      <a class="brand" href="./"><img src="img/icon.png" alt="Orc Flood icon">Orc Flood</a>
+      <a class="brand" href="./"><img src="img/icon192.png" alt="Orc Flood icon" width="44" height="44"><b>Orc Flood</b></a>
       <nav>
-        <a href="privacy.html">Privacy</a>
+        <a href="#arsenal">Arsenal</a>
+        <a href="#doctrine">Doctrine</a>
+        <a href="vs/sir-we-have-an-orc-problem/">FAQ</a>
         <a href="support.html">Support</a>
       </nav>
     </div>
   </header>
-  <main>
+
+  <section class="hero" aria-label="Orc Flood — the tide">
+    <canvas id="horde" aria-hidden="true"></canvas>
     <div class="wrap">
-      <section class="hero">
-        <div class="copy">
-          <h1>The flood<br><span class="a">is coming</span></h1>
-          <p class="tag">A pixel tower defense where the horde is not waves —
-            it is <b>one relentless tide</b>. Place every gun, aim every
-            barrel, and hold the line.</p>
-          <span class="pill">TOWER DEFENSE</span>
-        </div>
-        <div class="shot">
-          <img src="img/shot_hold.png" alt="Orc Flood gameplay: 28 towers holding the line against 116,000 orcs">
-        </div>
-      </section>
-      <section class="facts">
-        <div class="fact"><div class="n">160&thinsp;000</div><div class="l">orcs in the final campaign</div></div>
-        <div class="fact"><div class="n">7</div><div class="l">tower types</div></div>
-        <div class="fact"><div class="n">152</div><div class="l">upgrade-tree nodes</div></div>
-        <div class="fact"><div class="n">12</div><div class="l">campaign maps</div></div>
-      </section>
+      <span class="kicker">Field report · pixel tower defense</span>
+      <h1 class="mega">The flood<br><span class="a">is coming</span></h1>
+      <p class="sub">The horde is not waves — it is <b>one relentless tide</b>.
+        Up to 160&#8239;000 orcs per campaign, every one simulated, every kill
+        counted. Place every gun. Aim every barrel. Hold the line.</p>
+      <div class="stores">
+        <a class="store-btn" href="support.html" aria-label="App Store — coming soon">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.05 12.54c-.03-2.36 1.93-3.5 2.02-3.55-1.1-1.61-2.82-1.83-3.43-1.85-1.46-.15-2.85.86-3.59.86-.74 0-1.88-.84-3.1-.82-1.59.02-3.06.93-3.88 2.35-1.66 2.87-.42 7.12 1.19 9.45.79 1.14 1.73 2.42 2.96 2.37 1.19-.05 1.64-.77 3.08-.77 1.44 0 1.84.77 3.1.75 1.28-.02 2.09-1.16 2.87-2.31.9-1.32 1.28-2.6 1.3-2.67-.03-.01-2.49-.96-2.52-3.81zM14.68 5.6c.65-.79 1.09-1.89.97-2.98-.94.04-2.07.62-2.74 1.41-.6.7-1.13 1.82-.99 2.89 1.05.08 2.11-.53 2.76-1.32z"/></svg>
+          <span><small>Coming soon</small><b>App Store</b></span>
+        </a>
+        <a class="store-btn" href="support.html" aria-label="Google Play — coming soon">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3.6v16.8c0 .4.44.65.78.44l13.6-8.4c.33-.2.33-.68 0-.88L4.78 3.16A.52.52 0 0 0 4 3.6z"/></svg>
+          <span><small>Coming soon</small><b>Google Play</b></span>
+        </a>
+      </div>
     </div>
-  </main>
-  <footer class="site">
+    <div class="tide-meter">
+      <div class="wrap">
+        <span class="lbl">Orcs on this page right now</span>
+        <span class="n" id="tide-n">0</span>
+        <span class="note">a live simulation, like the game itself: the real thing fields up to 160&#8239;000</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="report" id="line">
     <div class="wrap">
-      <span>&copy; 2026 Orc Flood. All rights reserved.</span>
-      <span><a href="privacy.html">Privacy policy</a> &middot; <a href="support.html">Support</a></span>
+      <div class="field">
+        <span class="lbl">Situation</span>
+        <div>
+          <h2 class="h">Twenty-eight guns.<br><span class="a">One line of defense.</span></h2>
+          <p class="body">This is a real capture from campaign 6-2: no mockup,
+            no touch-ups. Twenty-eight maxed emplacements, four abilities off
+            cooldown, and the tide still coming. <b>Every orc on screen is
+            simulated individually</b>: pathing, packing, burning, dying.</p>
+        </div>
+      </div>
+      <figure class="shot">
+        <img src="img/shot_flood.webp" width="1600" height="900"
+             alt="Orc Flood gameplay: a fortified line of 28 towers firing into a flood of over one hundred thousand orcs">
+        <figcaption class="shot-cap"><span>Campaign 6-2 · defended</span><i>captured in-game, unedited</i></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <div class="band">
+    <div class="wrap">
+      <div>
+        <div class="lbl">Orcs alive in this shot</div>
+        <div class="big">110&#8239;000+</div>
+      </div>
+      <div class="tag">no ads · no timers · <em>fully offline</em></div>
+    </div>
+  </div>
+
+  <section class="report">
+    <div class="wrap">
+      <div class="duo rev">
+        <figure class="shot">
+          <img src="img/shot_closeup.webp" width="1600" height="900" loading="lazy"
+               alt="Close-up of flamethrower towers charring the ground while a cryo beam freezes a dense orc horde">
+          <figcaption class="shot-cap"><span>Flame, char &amp; cryo</span><i>ground fire burns for 10 s</i></figcaption>
+        </figure>
+        <div>
+          <span class="kicker">Engagement rules</span>
+          <h2 class="h">Aim every<br><span class="a">barrel</span></h2>
+          <p class="body">Towers don't auto-target — <b>you drag each turret's
+            line of fire</b> and the horde flows around the damage. Char the
+            ground with flame, freeze a lane with the cryo beam, call a
+            strafing run… and when the line bends, drop the nuke.</p>
+          <div class="chips" role="list">
+            <span class="chip" role="listitem"><img class="px" src="img/ability_cryo_beam.png" alt="" width="34" height="34"><span>Cryo Beam</span></span>
+            <span class="chip" role="listitem"><img class="px" src="img/ability_strafing_run.png" alt="" width="34" height="34"><span>Strafing Run</span></span>
+            <span class="chip" role="listitem"><img class="px" src="img/ability_missile.png" alt="" width="34" height="34"><span>Missile Strike</span></span>
+            <span class="chip" role="listitem"><img class="px" src="img/ability_nuke.png" alt="" width="34" height="34"><span>Nuke</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="arsenal" id="arsenal">
+    <div class="wrap">
+      <div class="field">
+        <span class="lbl">Arsenal</span>
+        <div>
+          <h2 class="h">Seven towers,<br><span class="a">zero filler</span></h2>
+          <p class="body">Each gun holds the line differently: sustained fire,
+            splash, area denial, chain lightning, piercing beams. All seven
+            unlock through play; nothing is sold separately.</p>
+        </div>
+      </div>
+      <div class="roster" role="list">
+        <span class="gun" role="listitem"><img class="px" src="img/tower_gunner.png" alt="" width="44" height="44"><span><b>Gunner</b><i>reliable sustained fire</i></span></span>
+        <span class="gun" role="listitem"><img class="px" src="img/tower_cannon.png" alt="" width="44" height="44"><span><b>Cannon</b><i>heavy splash rounds</i></span></span>
+        <span class="gun" role="listitem"><img class="px" src="img/tower_flamethrower.png" alt="" width="44" height="44"><span><b>Flamethrower</b><i>burns the ground itself</i></span></span>
+        <span class="gun" role="listitem"><img class="px" src="img/tower_grenade_launcher.png" alt="" width="44" height="44"><span><b>Grenade Launcher</b><i>lobbed area bursts</i></span></span>
+        <span class="gun" role="listitem"><img class="px" src="img/tower_mortar.png" alt="" width="44" height="44"><span><b>Mortar</b><i>long-range barrage</i></span></span>
+        <span class="gun" role="listitem"><img class="px" src="img/tower_tesla_coil.png" alt="" width="44" height="44"><span><b>Tesla Coil</b><i>chain lightning</i></span></span>
+        <span class="gun" role="listitem"><img class="px" src="img/tower_laser.png" alt="" width="44" height="44"><span><b>Laser</b><i>pierces the column</i></span></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="report" id="doctrine">
+    <div class="wrap">
+      <div class="duo">
+        <div>
+          <span class="kicker">Doctrine</span>
+          <h2 class="h">A 152-node<br><span class="a">upgrade tree</span></h2>
+          <p class="body">Paid in three currencies that come only from the
+            field: <b>scrap</b> from kills, <b>banners</b> from survival,
+            <b>skulls</b> from perfect clears. Every loss funds the next
+            attempt, and the keep remembers your layout per level.</p>
+          <div class="chips" role="list">
+            <span class="chip" role="listitem"><img class="px" src="img/currency_marks.png" alt="" width="34" height="34"><span>Scrap</span></span>
+            <span class="chip" role="listitem"><img class="px" src="img/currency_banners.png" alt="" width="34" height="34"><span>Banners</span></span>
+            <span class="chip" role="listitem"><img class="px" src="img/currency_skulls.png" alt="" width="34" height="34"><span>Skulls</span></span>
+          </div>
+        </div>
+        <figure class="shot">
+          <img src="img/shot_tree.webp" width="1600" height="900" loading="lazy"
+               alt="The Orc Flood upgrade tree: 152 nodes across weapon, economy and ability branches">
+          <figcaption class="shot-cap"><span>The doctrine tree</span><i>152 nodes, 3 currencies</i></figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="report">
+    <div class="wrap">
+      <div class="duo rev">
+        <figure class="shot">
+          <img src="img/shot_picker.webp" width="1600" height="900" loading="lazy"
+               alt="Campaign map of Orc Flood showing twelve handcrafted levels">
+          <figcaption class="shot-cap"><span>The campaign map</span><i>12 handcrafted campaigns</i></figcaption>
+        </figure>
+        <div>
+          <span class="kicker">Theatre of war</span>
+          <h2 class="h">Twelve<br><span class="a">campaigns</span></h2>
+          <p class="body">From the first skirmish to the final flood. Free to
+            start; one optional unlock opens the full war. <b>No energy
+            meters, no chests, no second currency store.</b> Just you, the
+            keep, and the tide.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="band">
+    <div class="wrap">
+      <div>
+        <div class="lbl">The final campaign alone</div>
+        <div class="big">160&#8239;000 orcs</div>
+      </div>
+      <div class="tag">premium · <em>one unlock</em> · yours forever</div>
+    </div>
+  </div>
+
+  <section class="teaser">
+    <div class="wrap">
+      <div class="card">
+        <div>
+          <h2 class="h" style="font-size: clamp(1.8rem, 3.5vw, 2.6rem);">Looking for <span class="a">Sir, We Have an Orc&nbsp;Problem</span> on mobile?</h2>
+          <p>The Steam classic is PC-only, and we're not affiliated with it.
+            But if that's the fantasy you're after on a phone, we wrote up an
+            honest comparison.</p>
+        </div>
+        <a class="btn" href="vs/sir-we-have-an-orc-problem/">Read the comparison</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-foot">
+    <div class="wrap">
+      <span>© 2026 Orc Flood · made by one very tired quartermaster</span>
+      <span class="cols">
+        <a href="privacy.html">Privacy</a>
+        <a href="support.html">Support</a>
+        <a href="vs/sir-we-have-an-orc-problem/">FAQ</a>
+        <a href="mailto:yrnrmlsv@gmail.com">yrnrmlsv@gmail.com</a>
+      </span>
     </div>
   </footer>
+
+  <script src="js/horde.js" defer></script>
 </body>
 </html>
