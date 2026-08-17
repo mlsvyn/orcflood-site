@@ -74,10 +74,37 @@ a { color: var(--acc); text-decoration-thickness: 1px; text-underline-offset: 3p
   display: flex; align-items: center; overflow: hidden;
   background: var(--bg3);
 }
-#horde { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* The hero has two mutually exclusive backgrounds occupying the same box, so
+   swapping between them can never shift the layout:
+     [data-hero="live"]   -> the canvas tide (WebGL, or Canvas2D fallback)
+     [data-hero="poster"] -> the real captured screenshot
+   No attribute at all means JS is off, which is the poster case too. */
+#horde { position: absolute; inset: 0; width: 100%; height: 100%; display: none; }
+.hero-poster {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; opacity: .58;
+  /* Zoom past the game's own HUD (health bar, ability rail) into the field, so
+     the still reads as the flood and not as a screenshot of a UI. */
+  transform: scale(1.5); transform-origin: 70% 46%;
+}
+@media (max-width: 620px) { .hero-poster { transform: scale(2.1); transform-origin: 64% 52%; } }
+[data-hero="live"] #horde { display: block; }
+[data-hero="live"] .hero-poster { display: none; }
+/* The live counter stays honest about what it is counting either way. */
+.tide-meter .note.live { display: none; }
+.tide-meter .note.still { display: block; }
+[data-hero="live"] .tide-meter .note.live { display: block; }
+[data-hero="live"] .tide-meter .note.still { display: none; }
 .hero::after { /* ground the copy: left vignette over the tide */
   content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(100deg, rgba(12,10,16,.96) 0%, rgba(12,10,16,.78) 40%, rgba(12,10,16,.06) 56%);
+  /* The falloff has to clear the copy, not the wrap: p.sub is 34rem wide and
+     on a 1600px viewport its last line ends around 64% across, so a gradient
+     that had faded by 56% left "every kill counted" sitting on bright crowd
+     speckle. Holding the shade to ~62% and easing out by 74% keeps the line
+     readable without walling off the tide. */
+  background: linear-gradient(100deg,
+    rgba(12,10,16,.96) 0%, rgba(12,10,16,.84) 44%,
+    rgba(12,10,16,.42) 62%, rgba(12,10,16,.06) 74%);
 }
 .hero .wrap { position: relative; z-index: 2; padding-top: 96px; padding-bottom: 140px; }
 .kicker {
@@ -263,11 +290,20 @@ h2.h .a { color: var(--acc); }
   .hero { flex-direction: column; align-items: stretch; }
   .hero .wrap { margin: auto 0; padding-top: 130px; padding-bottom: 48px; }
   .tide-meter { position: static; }
-  .hero::after { background: linear-gradient(180deg, rgba(12,10,16,.92) 0%, rgba(12,10,16,.62) 55%, rgba(12,10,16,.3) 100%); }
+  /* Phone: the copy owns the top, the tide owns the bottom. The lower stops
+     are lighter than they used to be so the horde actually reads there. */
+  .hero::after { background: linear-gradient(180deg, rgba(12,10,16,.93) 0%, rgba(12,10,16,.86) 34%, rgba(12,10,16,.46) 62%, rgba(12,10,16,.10) 100%); }
   .report { padding: 72px 0 60px; }
   .band { clip-path: polygon(0 26px, 100% 0, 100% 100%, 0 100%); padding-top: 70px; }
   .tide-meter .n { font-size: 24px; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
+  /* Safety net only — js/hero.js is the authority and refuses to start a loop
+     at all under reduced motion. This just guarantees the still is what shows
+     if a stale [data-hero="live"] stamp ever survives. */
+  [data-hero="live"] #horde { display: none; }
+  [data-hero="live"] .hero-poster { display: block; }
+  [data-hero="live"] .tide-meter .note.live { display: none; }
+  [data-hero="live"] .tide-meter .note.still { display: block; }
 }

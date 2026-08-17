@@ -21,6 +21,7 @@ FORM: war-office field report in the store-poster identity (brand canon).
   <link rel="canonical" href="https://www.orcflood.com/">
   <link rel="icon" href="img/icon64.png">
   <link rel="apple-touch-icon" href="img/icon192.png">
+  <link rel="manifest" href="/site.webmanifest">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Orc Flood">
   <meta property="og:title" content="Orc Flood: Tower Defense">
@@ -30,6 +31,21 @@ FORM: war-office field report in the store-poster identity (brand canon).
   <meta name="twitter:card" content="summary_large_image">
   <link rel="preload" href="fonts/BigShouldersStencil-900.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/site.css">
+  <script>
+  /* Route the hero BEFORE anything paints, so a reduced-motion, data-saver or
+     no-JS visitor gets the still poster and never pays for a canvas, a WebGL
+     context or a particle buffer. No stamp at all (JS off) => poster, per the
+     [data-hero] rules in css/site.css. js/hero.js reads this and bails early. */
+  (function (h) {
+    var still = false;
+    try { still = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+    try {
+      var c = navigator.connection;
+      if (c && (c.saveData === true || /(^|-)2g$/.test(c.effectiveType || ''))) still = true;
+    } catch (e) {}
+    h.setAttribute('data-hero', still ? 'poster' : 'live');
+  })(document.documentElement);
+  </script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -63,7 +79,7 @@ FORM: war-office field report in the store-poster identity (brand canon).
 <body>
   <header class="site-head">
     <div class="wrap">
-      <a class="brand" href="./"><img src="img/icon192.png" alt="Orc Flood icon" width="44" height="44"><img class="mark" src="img/logo_wordmark.png" alt="Orc Flood" width="450" height="72"></a>
+      <a class="brand" href="./"><img src="img/icon192.png" alt="Orc Flood icon" width="44" height="44"><img class="mark" src="img/logo_wordmark.png" alt="Orc Flood" width="450" height="76"></a>
       <nav>
         <a href="#arsenal">Arsenal</a>
         <a href="#doctrine">Doctrine</a>
@@ -75,6 +91,8 @@ FORM: war-office field report in the store-poster identity (brand canon).
 
   <section class="hero" aria-label="Orc Flood — the tide">
     <canvas id="horde" aria-hidden="true"></canvas>
+    <img class="hero-poster" src="img/shot_flood.webp" width="1600" height="900"
+         alt="Orc Flood in play: a gold line of towers firing into a flood of more than one hundred thousand orcs pouring across the field">
     <div class="wrap">
       <span class="kicker">Field report · pixel tower defense</span>
       <h1 class="mega">The flood<br><span class="a">is coming</span></h1>
@@ -95,8 +113,9 @@ FORM: war-office field report in the store-poster identity (brand canon).
     <div class="tide-meter">
       <div class="wrap">
         <span class="lbl">Orcs on this page right now</span>
-        <span class="n" id="tide-n">0</span>
-        <span class="note">a live simulation, like the game itself: the real thing fields up to 160&#8239;000</span>
+        <span class="n" id="tide-n">110&#8239;000</span>
+        <span class="note live">a live simulation, like the game itself: the real thing fields up to 160&#8239;000</span>
+        <span class="note still">counted in the capture behind this page, taken in-game: the real thing fields up to 160&#8239;000</span>
       </div>
     </div>
   </section>
@@ -261,6 +280,8 @@ FORM: war-office field report in the store-poster identity (brand canon).
     </div>
   </footer>
 
-  <script src="js/horde.js" defer></script>
+  <!-- GPU orc tide (OGL, vendored). Falls back to the Canvas2D tide in
+       js/horde.js, then to the poster <img> above. Modules defer by default. -->
+  <script type="module" src="js/hero.js"></script>
 </body>
 </html>
