@@ -57,7 +57,11 @@ a { color: var(--acc); text-decoration-thickness: 1px; text-underline-offset: 3p
 .site-head .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--ink); }
 .brand img { width: 44px; height: 44px; border-radius: 10px; }
-.brand b { font-family: var(--display); font-weight: 900; font-size: 26px; letter-spacing: .02em; text-transform: uppercase; }
+/* The real wordmark (tools/make_logo.py in the game repo) replaces the
+   display-font text, so the site, the game menu and the store art all
+   show one mark. Height-driven so the 900px master downscales cleanly. */
+.brand .mark { width: auto; height: 30px; display: block; }
+@media (max-width: 640px) { .brand .mark { height: 24px; } }
 .site-head nav { display: flex; gap: 26px; font-weight: 600; font-size: 15px; }
 .site-head nav a { color: var(--muted); text-decoration: none; }
 .site-head nav a:hover { color: var(--ink); }
