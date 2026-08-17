@@ -1,10 +1,19 @@
 /* Hero tide — GPU crowd.
  *
- * WHAT: tens of thousands of instanced orc sprites flowing right-to-left along
- * a flow field into the gold defended line, where they die. One draw call for
- * the whole tide; every orc's position, size, colour and death are computed in
- * the vertex shader from a single time uniform, so the CPU never touches a
- * particle. Renderer: OGL 1.0.11, vendored in js/vendor/ogl (Unlicense).
+ * WHAT: tens of thousands of instanced orc sprites flowing along a flow field
+ * into the gold defended line, where they die against a ragged, breathing
+ * pressure front. One draw call for the whole tide; every orc's position, size,
+ * colour and death are computed in the vertex shader from a single time uniform,
+ * so the CPU never touches a particle. Renderer: OGL 1.0.11, vendored in
+ * js/vendor/ogl (Unlicense).
+ *
+ * TWO COMPOSITIONS, ONE SIMULATION. Every pass works in "battle space" (x along
+ * the march, y across the front) and battle space is mapped onto the screen in
+ * exactly one place — battleMap(), fed to the shaders as uOrigin/uAxisM/uAxisL.
+ * Landscape gets the identity: the horde marches right-to-left into a vertical
+ * line. Portrait (<= 900px, where css/site.css stacks the hero and shades it
+ * top-to-bottom) gets a quarter turn: the line lies ACROSS the hero low down,
+ * the guns stand along it, and the flood climbs into it from the bottom edge.
  *
  * FALLBACK CHAIN (see also the inline stamp script + [data-hero] rules in css):
  *   1. prefers-reduced-motion / saveData / no JS  -> static poster <img>
@@ -58,12 +67,42 @@ const QUAD = new Float32Array([-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, 0.5,
 const TOWERS = ['gunner', 'cannon', 'flamethrower', 'grenade_launcher', 'mortar', 'tesla_coil', 'laser'];
 
 /* ------------------------------------------------------------------ shaders */
+/* BATTLE SPACE -> SCREEN, the one place orientation is decided.
+ *
+ * Every pass below works in "battle space": b.x runs along the march (1.07 at
+ * the far muster, uLineX at the defended line), b.y runs across it (0..1 of the
+ * front's width, the lanes). Screen space is 0..1 of the hero box.
+ *
+ *   screen = uOrigin + b.x * uAxisM + b.y * uAxisL
+ *
+ * Landscape passes the identity, so the desktop picture is exactly what it was.
+ * Portrait passes a 90-degree rotation: the line lies ACROSS the screen low
+ * down, the horde climbs into it from the bottom edge. Nothing else in any pass
+ * changes — that is the whole point of doing it here.
+ *
+ * uAspect is the ratio march-px : lateral-px, so anything that wants a round
+ * shape (scorched zones, deflection) stays round in both orientations.
+ * uMarchPx is device px per unit of b.x, for the passes that measure in px.
+ * The fragment passes need the inverse: b.x = dot(uBx, vec3(screen, 1.0)).
+ */
+const BATTLE_GLSL = /* glsl */ `
+uniform vec2  uOrigin;
+uniform vec2  uAxisM;
+uniform vec2  uAxisL;
+uniform vec3  uBx;
+uniform vec3  uBy;
+uniform float uMarchPx;
+uniform float uAimRot;   // 0 landscape, +PI/2 portrait: barrels turn to face the march
+vec2 toScreen(vec2 b) { return uOrigin + b.x * uAxisM + b.y * uAxisL; }
+vec2 toBattle(vec2 s) { vec3 h = vec3(s, 1.0); return vec2(dot(uBx, h), dot(uBy, h)); }
+`;
+
 const TIDE_VERT = /* glsl */ `
 precision highp float;
 
 attribute vec2 position;  // unit quad, -0.5..0.5
 attribute vec4 seed;      // x life offset, y revolutions/sec, z lane y, w phase
-attribute vec4 trait;     // x depth, y colour mix, z death bias, w dead fraction
+attribute vec4 trait;     // x depth, y colour mix, z front pressure, w dead fraction
 
 uniform float uTime;
 uniform vec2  uRes;       // drawing buffer, device px
@@ -72,6 +111,7 @@ uniform float uAspect;
 uniform float uLineX;
 uniform float uKill;
 uniform float uOrcPx;
+uniform float uFrontK; // front detail per lateral unit: 1 at a 900px front
 uniform float uDark;   // how dark the unlit end of the field is
 uniform vec3  uObs0;
 uniform vec3  uObs1;
@@ -86,6 +126,7 @@ varying vec2  vUv;
 varying vec4  vTint;
 varying float vDead;
 varying float vLit;
+` + BATTLE_GLSL + /* glsl */ `
 
 // Push away from a scorched zone as the orc passes it, then relax downstream:
 // the tide splits and closes again.
@@ -97,6 +138,23 @@ float deflect(vec3 o, float x, float y0) {
     return sign(dy + 0.0001) * o.z * 0.34 * near * ramp;
 }
 
+/* HOW FAR THE LINE IS HOLDING THE HORDE OFF, at this point on the front.
+   A field in the lateral axis and in time, NOT a per-body random: it is a
+   function of position, so every neighbour reads the same value and a pack
+   arrives as one body. Four octaves give pockets that reach the wall and
+   stretches held a full kill-band out; the time terms drift the pattern
+   sideways and pulse it, so the front breathes instead of standing still.
+   uFrontK scales the octaves so a bulge is the same size IN PIXELS on any
+   front: without it a phone's short front gets one lonely dome. */
+float holdField(float y, float t) {
+    float k = uFrontK;
+    float h = 0.50 * sin(y *  6.9 * k + t * 0.21)
+            + 0.28 * sin(y * 15.7 * k - t * 0.37 + 1.7)
+            + 0.14 * sin(y * 33.0 * k + t * 0.61 + 4.1)
+            + 0.08 * sin(y * 61.0 * k - t * 0.95 + 2.3);
+    return smoothstep(-0.52, 0.60, h);
+}
+
 void main() {
     float p    = fract(seed.x + uTime * seed.y);
     float df   = trait.w;
@@ -105,11 +163,19 @@ void main() {
     float dead = max(0.0, (p - live) / df);       // 0 while alive, then 0..1
 
     // Decelerate into the line: the mass piles up instead of sheeting through.
-    float e = 1.0 - pow(1.0 - m, 1.38);
-    // Contact line undulates in y and time, so the front is ragged, not a cliff.
-    float front = uLineX + uKill * trait.z
-                + 0.008 * (1.0 + sin(seed.z * 11.0 + uTime * 0.45))
-                + 0.004 * (1.0 + sin(seed.z * 27.0 - uTime * 0.7));
+    float e = 1.0 - pow(1.0 - m, 1.62);
+    /* Where THIS body's march ends. Three terms, in order of scale:
+         the front field   — the shape of the pressure front (coherent)
+         the pack's press  — this mob's own share of it (coherent per pack)
+         a per-body stack  — squared, so most bodies crowd the contact edge and
+                             the rest pile back off it: depth, not a contour.
+       hold is clamped to >= 0 and the whole offset is added, never subtracted,
+       so the front CANNOT cross the trench however the terms land. */
+    float jo   = fract(seed.w * 0.31830989 * 17.0);
+    float hold = clamp(0.74 * holdField(seed.z, uTime)
+                     + 0.46 * trait.z
+                     + 0.30 * jo * jo - 0.27, 0.0, 1.0);
+    float front = uLineX + uKill * hold;
     float x = mix(1.07, front, e);
 
     float y = seed.z;
@@ -119,6 +185,12 @@ void main() {
     y += 0.020 * sin(x * 9.7 + uTime * 0.52 + seed.z * 3.0);
     float press = smoothstep(0.25, 1.0, m);
     y += press * 0.020 * sin(seed.w * 2.7 + seed.x * 9.1);   // fan out on the line
+    /* ...and slide ALONG the front, down the pressure gradient, so a pocket
+       actually FILLS with bodies instead of merely reaching further. This is
+       what makes the front read as a crowd under pressure rather than a
+       wavy edge: mass gathers where the line is giving way. */
+    float eps = 0.013 / uFrontK;
+    y -= press * 0.030 * (holdField(seed.z + eps, uTime) - holdField(seed.z - eps, uTime));
     y += 0.0018 * sin(uTime * 7.5 + seed.w * 6.283);         // waddle
     y += deflect(uObs0, x, seed.z) + deflect(uObs1, x, seed.z) + deflect(uObs2, x, seed.z);
 
@@ -144,7 +216,10 @@ void main() {
     col = mix(col, uAcc, lit * lit * 0.30);
     col = mix(col, uGold, press * press * 0.10);
 
-    vec2 c  = vec2(x * uRes.x, y * uRes.y);
+    // Only the POSITION is mapped into screen space; the quad itself stays
+    // screen-axis-aligned and sized in device px, so a body is never stretched
+    // by the viewport's aspect and never lies on its side in portrait.
+    vec2 c  = toScreen(vec2(x, y)) * uRes;
     vec2 px = c + position * vec2(size * 0.78, size);
 
     gl_Position = vec4(px.x / uRes.x * 2.0 - 1.0, 1.0 - px.y / uRes.y * 2.0, 0.0, 1.0);
@@ -232,12 +307,13 @@ uniform vec3  uDirt;
 uniform vec3  uRock;
 uniform vec3  uBlood;
 uniform vec3  uFire;
+` + BATTLE_GLSL + /* glsl */ `
 
 uniform vec3 uLanes;
 float lane(float y, float c, float h) { return 1.0 - smoothstep(h * 0.45, h, abs(y - c)); }
 
-vec3 scar(vec3 o) {
-    vec2 d  = vec2((vUv.x - o.x) * uAspect, vUv.y - o.y) / o.z;
+vec3 scar(vec3 o, vec2 b) {
+    vec2 d  = vec2((b.x - o.x) * uAspect, b.y - o.y) / o.z;
     float r = length(d);
     float inner = 1.0 - smoothstep(0.10, 1.20, r);
     float ember = 0.5 + 0.5 * sin(uTime * 2.3 + o.y * 37.0 + r * 9.0);
@@ -246,16 +322,17 @@ vec3 scar(vec3 o) {
 }
 
 void main() {
-    float d = vUv.x - uLineX;
+    vec2 b = toBattle(vUv);
+    float d = b.x - uLineX;
     float field = smoothstep(-0.03, 0.06, d);       // ground only beyond the line
-    float L = max(max(lane(vUv.y, uLanes.x, 0.17), lane(vUv.y, uLanes.y, 0.18)), lane(vUv.y, uLanes.z, 0.15));
+    float L = max(max(lane(b.y, uLanes.x, 0.17), lane(b.y, uLanes.y, 0.18)), lane(b.y, uLanes.z, 0.15));
     float g = fract(sin(dot(floor(vUv * uRes / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
     vec3 c = mix(uRock * 0.042, uDirt * 0.075, L) * field * (0.7 + 0.6 * g);
     // corpses never decay in this game: the ground at the line is a mat of them
     float mat = (1.0 - smoothstep(0.0, 0.09, d)) * step(-0.004, d) * (0.35 + 0.65 * L);
     c += uBlood * mat * 0.85;
     c += uAcc * (1.0 - smoothstep(0.0, 0.20, abs(d - 0.03))) * 0.035;   // gunlight wash
-    c += scar(uObs0) + scar(uObs1) + scar(uObs2);
+    c += scar(uObs0, b) + scar(uObs1, b) + scar(uObs2, b);
     gl_FragColor = vec4(max(c, vec3(0.0)), 1.0);
 }`;
 
@@ -269,8 +346,10 @@ uniform float uPx;
 uniform float uLineX;
 uniform vec3  uGold;
 uniform vec3  uGround;
+` + BATTLE_GLSL + /* glsl */ `
 void main() {
-    float d = (uLineX - vUv.x) * uRes.x;          // device px left of the line
+    // device px on the DEFENDED side of the line, measured along the march axis
+    float d = (uLineX - toBattle(vUv).x) * uMarchPx;
     float shade = smoothstep(13.0 * uPx, 0.0, d) * step(0.0, d) * 0.55;
     float edge  = smoothstep(2.4 * uPx, 0.0, abs(d - 1.2 * uPx));
     float a = max(shade, edge * 0.92);
@@ -296,13 +375,15 @@ uniform float uTime;
 uniform float uSlots;
 uniform float uTurPx;
 varying vec2  vUv;
+` + BATTLE_GLSL + /* glsl */ `
 void main() {
-    float aim = tur.z + 0.16 * sin(uTime * 0.37 + tur.w * 6.283)
-                      + 0.05 * sin(uTime * 1.10 + tur.w * 3.1);
+    float aim = uAimRot + tur.z + 0.16 * sin(uTime * 0.37 + tur.w * 6.283)
+                                + 0.05 * sin(uTime * 1.10 + tur.w * 3.1);
     float s = uTurPx * uPx;
     vec2 q = position * s;
     vec2 r = vec2(q.x * cos(aim) - q.y * sin(aim), q.x * sin(aim) + q.y * cos(aim));
-    vec2 p = vec2(uLineX * uRes.x, tur.x * uRes.y) + r;
+    // an emplacement stands ON the line, at its own place along it
+    vec2 p = toScreen(vec2(uLineX, tur.x)) * uRes + r;
     gl_Position = vec4(p.x / uRes.x * 2.0 - 1.0, 1.0 - p.y / uRes.y * 2.0, 0.0, 1.0);
     // atlas slot -> u range; v is straight through (texture uploaded unflipped)
     vUv = vec2((tur.y + position.x + 0.5) / uSlots, position.y + 0.5);
@@ -354,6 +435,7 @@ varying float vHit;
 varying vec2  vLocal;
 varying float vMode;
 varying float vAlpha;
+` + BATTLE_GLSL + /* glsl */ `
 
 float aimAt(float t, float phase) {
     return 0.16 * sin(t * 0.37 + phase * 6.283) + 0.05 * sin(t * 1.10 + phase * 3.1);
@@ -372,7 +454,7 @@ void main() {
     float flight = rng / uSpeedPx;                    // seconds, muzzle to reach
     float travel = clamp(ageS / flight, 0.0, 1.0);
     float aimT = uTime - travel * flight * (1.0 - isBeam);
-    float aim = bulA.y + aimAt(aimT, bulA.z);
+    float aim = uAimRot + bulA.y + aimAt(aimT, bulA.z);
     vec2 dir = vec2(cos(aim), sin(aim));
 
     float dist, hx, hy, alpha;
@@ -403,7 +485,7 @@ void main() {
     vec2 hs = vec2(hx, hy) * step(0.001, alpha);
     vec2 q = position * hs * 2.0;
     vec2 off = dir * dist + vec2(q.x * dir.x - q.y * dir.y, q.x * dir.y + q.y * dir.x);
-    vec2 p = vec2(uLineX * uRes.x, bulA.x * uRes.y) + off;
+    vec2 p = toScreen(vec2(uLineX, bulA.x)) * uRes + off;
     gl_Position = vec4(p.x / uRes.x * 2.0 - 1.0, 1.0 - p.y / uRes.y * 2.0, 0.0, 1.0);
     vLocal = position * 2.0;
     vMode = mix(mode, 5.0, isFlash);
@@ -451,21 +533,82 @@ void main() {
 }`;
 
 /* ------------------------------------------------------------------ layout */
-/* Density is per-area, so a phone and a desktop read as the same crowd. */
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+/* Density is per-area, so a phone and a desktop read as the same crowd.
+   The battle geometry is identical in both orientations — same line at the same
+   place in battle space, same kill band. What changes is only how battle space
+   is laid onto the screen (see battleMap) and how big a body is drawn. */
+/* The single source of truth for "is the hero stacked?" — the same query the
+   stacking block in css/site.css uses, so the battle's orientation and the copy's
+   layout can never disagree. */
+const PORTRAIT_MQ = window.matchMedia('(max-width: 900px)');
+
 function layout(cssW, cssH) {
-    const mobile = cssW < 620;
+    /* Once css/site.css stacks the hero into a column and shades it
+       top-to-bottom: the layout says "copy up top, spectacle at the bottom".
+       So the battle turns with it — the line lies ACROSS the screen and the
+       flood rises into it from the bottom edge. */
+    /* Ask the CSS the question instead of restating its number. cssW is the
+       hero ELEMENT's width, which excludes the scrollbar, while the media query
+       goes by the viewport — so comparing cssW to the number disagreed with the CSS
+       across a ~15px band (at a 621px viewport the element is ~606: the JS
+       turned the battle while the CSS kept the desktop copy, and the guns and
+       crowd landed on top of the store buttons). matchMedia cannot drift. */
+    const portrait = PORTRAIT_MQ.matches;
     const area = cssW * cssH;
-    /* On a phone the copy sits over a top-to-bottom vignette rather than a
-       left one (see the 620px block in css/site.css), so the line moves left
-       and the tide gets most of the width instead of a 140px strip. */
+    /* The band below the line is where the whole crowd lives, so give it a real
+       height (~300 css px) and never let it eat more than the bottom 45%: above
+       it is the copy, which has to stay readable. */
+    const lineAt = portrait ? clamp(1 - 300 / cssH, 0.55, 0.68) : 0;
+    // lateral extent of the front in css px: the width in portrait, the height otherwise
+    const lat = portrait ? cssW : cssH;
+    // keep a bulge in the front the same size in px whatever the front's length
+    const frontK = clamp(900 / lat, 0.8, 3.2);
     return {
-        mobile: mobile,
-        lineX: mobile ? 0.4 : 0.6,
-        kill: mobile ? 0.16 : 0.11,
-        orcPx: mobile ? 6.0 : 5.6,   // chunkier on a phone: it reads under the vignette
-        turrets: Math.max(3, Math.min(7, Math.round(cssH / (mobile ? 190 : 148)))),
-        turretPx: mobile ? 40 : 58,
-        count: Math.max(6000, Math.min(mobile ? 26000 : 84000, Math.round(area / (mobile ? 14 : 17)))),
+        portrait: portrait,
+        lineX: 0.6,
+        kill: portrait ? 0.13 : 0.095,
+        lineAt: lineAt,
+        /* Where the far muster (battle x = 1.07) lands. Just off the bottom edge
+           in portrait, so bodies walk in from behind the meter panel rather than
+           popping into existence mid-screen. */
+        spawnAt: 1.05,
+        orcPx: portrait ? 6.6 : 5.6,   // chunkier on a phone: it reads under the vignette
+        frontK: frontK,
+        dark: portrait ? 0.52 : 0.3,
+        lanes: portrait ? [0.18, 0.5, 0.82] : [0.28, 0.6, 0.87],
+        /* How wide a pack sits across its lane. On a phone the front is the
+           whole width of the screen and the three columns have to merge into one
+           mass across it — three thin ribbons with gaps between them reads as
+           streams, not as a flood. */
+        spread: portrait ? 1.95 : 1,
+        turrets: clamp(Math.round(lat / (portrait ? 78 : 148)), 3, 7),
+        turretPx: portrait ? 42 : 58,
+        count: Math.max(6000, Math.min(portrait ? 30000 : 84000, Math.round(area / (portrait ? 13 : 17)))),
+    };
+}
+
+/* Battle space -> screen, as plain numbers for the uniforms in BATTLE_GLSL.
+   Landscape is the identity map, so the desktop composition is untouched.
+   Portrait rotates a quarter turn: b.y becomes screen x (the front spans the
+   full width), b.x becomes screen y (the march climbs the screen). */
+function battleMap(cfg, resW, resH) {
+    if (!cfg.portrait) {
+        return {
+            origin: [0, 0], axisM: [1, 0], axisL: [0, 1],
+            bx: [1, 0, 0], by: [0, 1, 0],
+            marchPx: resW, aspect: resW / resH, aimRot: 0,
+        };
+    }
+    const s = (cfg.spawnAt - cfg.lineAt) / (1.07 - cfg.lineX); // screen y per unit march
+    const oy = cfg.lineAt - cfg.lineX * s;
+    return {
+        origin: [0, oy], axisM: [0, s], axisL: [1, 0],
+        bx: [0, 1 / s, -oy / s], by: [1, 0, 0],
+        marchPx: s * resH, aspect: (s * resH) / resW,
+        // the horde is DOWN-screen of the line here, so the barrels swing to it
+        aimRot: Math.PI / 2,
     };
 }
 
@@ -488,8 +631,16 @@ function createGpuTide(canvas, cssW, cssH) {
         uRes: { value: [1, 1] },
         uPx: { value: dpr },
         uAspect: { value: 1 },
-        uLineX: { value: 0.52 },
-        uKill: { value: 0.11 },
+        uLineX: { value: 0.6 },
+        uKill: { value: 0.095 },
+        // battle space -> screen; resize() fills these in (identity in landscape)
+        uOrigin: { value: [0, 0] },
+        uAxisM: { value: [1, 0] },
+        uAxisL: { value: [0, 1] },
+        uBx: { value: [1, 0, 0] },
+        uBy: { value: [0, 1, 0] },
+        uMarchPx: { value: 1 },
+        uAimRot: { value: 0 },
         uObs0: { value: [0, 0, 1] },
         uObs1: { value: [0, 0, 1] },
         uObs2: { value: [0, 0, 1] },
@@ -511,6 +662,7 @@ function createGpuTide(canvas, cssW, cssH) {
         transparent: true,
         uniforms: u({
             uOrcPx: { value: 4.4 },
+            uFrontK: { value: 1 },
             uDark: { value: 0.3 },
             uSkin: { value: SKIN },
             uSkinHi: { value: SKIN_HI },
@@ -527,7 +679,14 @@ function createGpuTide(canvas, cssW, cssH) {
        every slot is seeded up front. Re-laying out the hero then only changes
        how many instances we ask for — a resize never reallocates anything, and
        there is no per-frame CPU work over the crowd at all. */
-    const LANES = cssW < 620 ? [0.4, 0.62, 0.83] : [0.28, 0.6, 0.87];
+    /* Lanes are LATERAL positions, so they mean the same thing in both
+       orientations — but the crowd buffer is seeded exactly once (a resize must
+       never reallocate), so the lanes are fixed at boot from the boot layout.
+       uLanes therefore tracks the SEEDED lanes for the life of the context, and
+       a device that is rotated across the stacking breakpoint keeps the lane set it
+       booted with; the values are close enough that nothing breaks. */
+    const BOOT = layout(cssW, cssH);
+    const LANES = BOOT.lanes;
     fieldProg.uniforms.uLanes.value = LANES;
     const MAX = Math.max(6000, Math.min(84000, Math.round((cssW * cssH * 1.6) / 13)));
     const seed = new Float32Array(MAX * 4);
@@ -546,12 +705,12 @@ function createGpuTide(canvas, cssW, cssH) {
         const o = i * 4;
         const c = (i / PACK) | 0;
         const h1 = hash(c * 1.7), h2 = hash(c * 2.3 + 0.4), h3 = hash(c * 3.1 + 0.9);
-        const h4 = hash(c * 4.7 + 0.2), h5 = hash(c * 5.3 + 0.6);
+        const h4 = hash(c * 4.7 + 0.2), h5 = hash(c * 5.3 + 0.6), h6 = hash(c * 6.1 + 0.35);
         const laneY = h1 < 0.42 ? LANES[0] : h1 < 0.8 ? LANES[1] : LANES[2];
         const loose = h5 < 0.17;
-        const jx = loose ? 0.055 : 0.014;  // depth of the pack, in life fraction
-        const jy = loose ? 0.038 : 0.011;  // width of the pack, in screen height
-        const packY = laneY + (h2 - 0.5) * (loose ? 0.22 : 0.085);
+        const jx = loose ? 0.055 : 0.014;               // depth of the pack, in life fraction
+        const jy = (loose ? 0.038 : 0.011) * BOOT.spread; // width of the pack, laterally
+        const packY = laneY + (h2 - 0.5) * (loose ? 0.22 : 0.085) * BOOT.spread;
         const packDepth = 0.15 + h4 * 0.85;
         seed[o] = (h3 + (Math.random() - 0.5) * jx + 1) % 1; // pack's place in the queue
         seed[o + 1] = 1 / (5.5 + (1 - packDepth) * 7.5 + h4 * 1.5); // pack's pace
@@ -559,8 +718,13 @@ function createGpuTide(canvas, cssW, cssH) {
         seed[o + 3] = Math.random() * 6.283;
         trait[o] = Math.min(1, Math.max(0, packDepth + (Math.random() - 0.5) * 0.18));
         trait[o + 1] = Math.pow(Math.random(), 2.4);
-        // most die on the line; a picked-off minority thins out ahead of it
-        trait[o + 2] = Math.random() < 0.18 ? Math.pow(Math.random(), 0.5) : Math.pow(Math.random(), 2.6);
+        /* This body's share of how far it is held off the line (the vertex
+           shader adds the front field and a per-body stack on top). It is a
+           PACK value, not a per-orc one: a pack that punches deep punches deep
+           together, which is what makes a pocket read as a pocket instead of
+           noise. On top of it, one body in eight is a skirmisher picked off well
+           short of the line, which gives the front depth of field. */
+        trait[o + 2] = Math.min(1, h6 * 0.62 + (Math.random() < 0.12 ? 0.3 + Math.random() * 0.7 : 0));
         trait[o + 3] = 0.05 + Math.random() * 0.16;
     }
     const tideGeo = new Geometry(gl, {
@@ -626,14 +790,17 @@ function createGpuTide(canvas, cssW, cssH) {
     /* Lay the line out irregularly: identical guns at identical spacing is the
        thing that reads as fake. Each emplacement gets its own gun, its own
        standing aim and its own firing phase. */
-    function setTurrets(n, turretPx) {
+    function setTurrets(n, turretPx, portrait) {
         const pxPerWu = turretPx / 18; // a tower is 18 world units wide in game
+        /* Inset the end emplacements far enough that no gun is ever sliced by
+           the edge of the hero: half a sprite plus the swing of its barrel. */
+        const pad = portrait ? 0.11 : 0.085;
         for (let i = 0; i < n; i++) {
             const o = i * 4;
             const jog = Math.sin(i * 12.9898) * 0.5 + Math.sin(i * 4.1414) * 0.5;
             const kind = (i * 3 + ((i * i) % 5)) % TOWERS.length;
             const gun = GUNS[TOWERS[kind]];
-            turData[o] = 0.085 + ((i + 0.5) / n) * 0.83 + jog * 0.035; // y, irregular
+            turData[o] = pad + ((i + 0.5) / n) * (1 - 2 * pad) + jog * (portrait ? 0.02 : 0.035);
             turData[o + 1] = kind;
             turData[o + 2] = jog * 0.34;                               // standing aim
             turData[o + 3] = (i * 0.373 + Math.sin(i * 7.1) * 0.21 + 1) % 1; // firing phase
@@ -705,15 +872,27 @@ function createGpuTide(canvas, cssW, cssH) {
             canvas.style.height = '100%';
             const res = [Math.round(cssW * dpr), Math.round(cssH * dpr)];
             const cfg = layout(cssW, cssH);
+            /* The ONE place orientation is decided. Every pass reads the same
+               battle->screen map, so nothing below is orientation-aware. */
+            const map = battleMap(cfg, res[0], res[1]);
             for (const p of progs) {
                 p.uniforms.uRes.value = res;
-                p.uniforms.uAspect.value = cssW / cssH;
+                p.uniforms.uAspect.value = map.aspect;
+                p.uniforms.uOrigin.value = map.origin;
+                p.uniforms.uAxisM.value = map.axisM;
+                p.uniforms.uAxisL.value = map.axisL;
+                p.uniforms.uBx.value = map.bx;
+                p.uniforms.uBy.value = map.by;
+                p.uniforms.uMarchPx.value = map.marchPx;
+                p.uniforms.uAimRot.value = map.aimRot;
             }
             turretProg.uniforms.uTurPx.value = cfg.turretPx;
-            setTurrets(cfg.turrets, cfg.turretPx);
-            // Height-only change (mobile URL bar collapsing mid-scroll): the
-            // buffer, the crowd size, the line and the scorched zones are all
-            // width-derived, so stop here.
+            setTurrets(cfg.turrets, cfg.turretPx, cfg.portrait);
+            /* Height-only change (mobile URL bar collapsing mid-scroll): the
+               battle->screen map above IS height-derived in portrait, so it has
+               already been redone; everything from here down — the buffer, the
+               crowd size, the line, the scorched zones — is width-derived, so
+               stop. Nothing is reallocated on either path. */
             if (!widthChanged) return;
             for (const p of progs) {
                 p.uniforms.uLineX.value = cfg.lineX;
@@ -724,8 +903,9 @@ function createGpuTide(canvas, cssW, cssH) {
                 }
             }
             tideProg.uniforms.uOrcPx.value = cfg.orcPx;
+            tideProg.uniforms.uFrontK.value = cfg.frontK;
             // a phone's vignette sits on top of the whole hero, so lift the floor
-            tideProg.uniforms.uDark.value = cfg.mobile ? 0.82 : 0.3;
+            tideProg.uniforms.uDark.value = cfg.dark;
             N = Math.min(MAX, cfg.count);
             tideGeo.setInstancedCount(N);
         },
@@ -806,11 +986,20 @@ const fmt = (n) => n.toLocaleString('en-US').replace(/,/g, NNBSP);
     }
     const sync = () => (inView && !document.hidden ? start() : stop());
 
+    /* Crossing the stack breakpoint turns the whole battle, so it has to take the
+       expensive path even in the rare case where the element's width lands on the
+       same rounded pixel (a scrollbar appearing as the copy reflows can do that).
+       Tracked here rather than inferred from the width, which is exactly the
+       assumption that put the JS and the CSS on different sides of the breakpoint. */
+    let wasPortrait = PORTRAIT_MQ.matches;
+
     function measure() {
         const r = hero.getBoundingClientRect();
         const w = Math.max(1, Math.round(r.width));
         const h = Math.max(1, Math.round(r.height));
-        const widthChanged = w !== cssW;
+        const turned = PORTRAIT_MQ.matches !== wasPortrait;
+        const widthChanged = w !== cssW || turned;
+        wasPortrait = PORTRAIT_MQ.matches;
         cssW = w;
         cssH = h;
         return widthChanged;
@@ -824,7 +1013,8 @@ const fmt = (n) => n.toLocaleString('en-US').replace(/,/g, NNBSP);
         rt = setTimeout(() => {
             if (!tide) return;
             const r = hero.getBoundingClientRect();
-            if (Math.round(r.width) === cssW && Math.round(r.height) === cssH) return;
+            if (Math.round(r.width) === cssW && Math.round(r.height) === cssH
+                && PORTRAIT_MQ.matches === wasPortrait) return;
             const widthChanged = measure();
             tide.resize(cssW, cssH, widthChanged);
             if (!running) tide.frame(t, 0); // keep a correct still frame while paused
