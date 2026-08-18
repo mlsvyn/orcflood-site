@@ -72,7 +72,7 @@ export function createCanvasTide(canvas) {
                scrollbar, so comparing it to the breakpoint turned the battle
                ~15px before the copy stacked. */
             portrait = window.matchMedia('(max-width: 900px)').matches;
-            lineAt = Math.min(0.68, Math.max(0.55, 1 - 300 / cssH));
+            lineAt = Math.min(0.72, Math.max(0.55, 1 - 228 / cssH));
             mScale = (1.05 - lineAt) / (1.07 - lineX);
             // Height-only change (mobile URL bar): the buffer is normalised, so
             // resizing the backing store is the rest of the job.

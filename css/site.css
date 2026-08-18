@@ -69,8 +69,15 @@ a { color: var(--acc); text-decoration-thickness: 1px; text-underline-offset: 3p
 .site-head.solid { position: static; background: var(--bg); border-bottom: 1px solid var(--line); }
 
 /* ---------- hero ---------- */
+/* The hero and the counter below it share ONE viewport. The hero takes whatever
+   height is left after the strip, so the counter is on screen at first paint
+   without anyone hard-coding the strip's height — it is free to grow when its
+   note wraps to two lines on a phone, and the hero simply gets less.
+   min-height rather than height: on a short viewport the copy wins and the
+   stack grows instead of the text being clipped. */
+.hero-stack { min-height: 100svh; display: flex; flex-direction: column; }
 .hero {
-  position: relative; min-height: 100svh;
+  position: relative; flex: 1 1 auto;
   display: flex; align-items: center; overflow: hidden;
   background: var(--bg3);
 }
@@ -297,11 +304,17 @@ h2.h .a { color: var(--acc); }
      needs the full width, so the landscape composition put a gun behind the
      Google Play button. js/hero.js reads this exact query through matchMedia, so
      the two can only ever agree — do not restate 900 in the JS.
-     The renderer puts the line at 1 - 300px/heroHeight, so it needs a 300px band
-     under the copy: that is what padding-bottom reserves. Shrink it and the copy
-     lands on the guns. */
+     The renderer puts the line at 1 - 228px/heroHeight, so it needs a 228px band
+     under the copy; padding-bottom reserves 262. The extra 34 is NOT slack: a
+     gun is a disc CENTRED on the line, so it reaches ~20px above it (turretPx/2),
+     and reserving only to the line puts the turret row on the store buttons. Shrink the padding alone and the
+     copy lands on the guns — the two numbers move together (js/hero.js and
+     js/horde.js both carry the 228).
+     WHY 240 AND NOT 312: the hero and the counter share one viewport, and the
+     hero cannot shrink below its own content. At 312 the pair came to 907px on a
+     852px phone, so the counter fell below the fold at first paint. */
   .hero { flex-direction: column; align-items: stretch; }
-  .hero .wrap { margin: 0; padding-top: 92px; padding-bottom: 312px; }
+  .hero .wrap { margin: 0; padding-top: 80px; padding-bottom: 262px; }
   /* Dark through the copy, then out of the way: the front and the guns sit in
      the clear, which is the whole reason the composition rotated. */
   .hero::after { background: linear-gradient(180deg,

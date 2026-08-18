@@ -31,7 +31,7 @@ FORM: war-office field report in the store-poster identity (brand canon).
   <meta property="og:image" content="https://www.orcflood.com/img/og.jpg">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="preload" href="fonts/BigShouldersStencil-900.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/site.css?v=b2552e94">
+  <link rel="stylesheet" href="css/site.css?v=fb1cef4c">
   <script>
   /* Route the hero BEFORE anything paints, so a reduced-motion, data-saver or
      no-JS visitor gets the still poster and never pays for a canvas, a WebGL
@@ -90,6 +90,10 @@ FORM: war-office field report in the store-poster identity (brand canon).
     </div>
   </header>
 
+  <!-- Hero and meter share ONE viewport: the hero flexes to whatever is left
+       after the meter, so the counter is on screen at first paint without
+       anyone having to guess the strip's height. -->
+  <div class="hero-stack">
   <section class="hero" aria-label="Orc Flood — the tide">
     <canvas id="horde" aria-hidden="true"></canvas>
     <img class="hero-poster" src="img/shot_flood.webp" width="1600" height="900"
@@ -123,6 +127,7 @@ FORM: war-office field report in the store-poster identity (brand canon).
       <span class="note live">a live simulation, like the game itself: the real thing fields up to 160&#8239;000</span>
       <span class="note still">counted in the capture behind this page, taken in-game: the real thing fields up to 160&#8239;000</span>
     </div>
+  </div>
   </div>
 
   <section class="report" id="line">
@@ -287,6 +292,6 @@ FORM: war-office field report in the store-poster identity (brand canon).
 
   <!-- GPU orc tide (OGL, vendored). Falls back to the Canvas2D tide in
        js/horde.js, then to the poster <img> above. Modules defer by default. -->
-  <script type="module" src="js/hero.js?v=b2552e94"></script>
+  <script type="module" src="js/hero.js?v=fb1cef4c"></script>
 </body>
 </html>

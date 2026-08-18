@@ -565,7 +565,11 @@ function layout(cssW, cssH) {
     /* The band below the line is where the whole crowd lives, so give it a real
        height (~300 css px) and never let it eat more than the bottom 45%: above
        it is the copy, which has to stay readable. */
-    const lineAt = portrait ? clamp(1 - 300 / cssH, 0.55, 0.68) : 0;
+    /* Upper bound 0.72, not 0.68: on a 757px portrait hero the css reserves a
+       228px band, which wants lineAt 0.699 — the old 0.68 clamped it back and
+       pulled the guns up onto the store buttons. The clamp is a sanity rail, not
+       the layout; the band constant above is the layout. */
+    const lineAt = portrait ? clamp(1 - 228 / cssH, 0.55, 0.72) : 0;
     // lateral extent of the front in css px: the width in portrait, the height otherwise
     const lat = portrait ? cssW : cssH;
     // keep a bulge in the front the same size in px whatever the front's length
