@@ -111,7 +111,7 @@ a { color: var(--acc); text-decoration-thickness: 1px; text-underline-offset: 3p
    shrinks to its content (592px) and `margin: 0 auto` then centres that block,
    which put the headline ~256px right of every other left edge on the page and
    ran the last line of p.sub past the defended line into the crowd.
-   Direct child only: .tide-meter .wrap is also a `.hero .wrap`. */
+   Direct child only, so nothing nested inside the hero inherits the width. */
 .hero > .wrap { width: 100%; }
 .kicker {
   font-weight: 700; font-size: 13px; letter-spacing: .16em;
@@ -139,10 +139,13 @@ h1.mega, .mega {
 .store-btn:hover small { color: var(--on-acc-2); }
 .store-btn:hover svg { fill: var(--on-acc); }
 
+/* Below the hero, in normal flow — not an overlaid strip. Overlaid, its
+   background and text cut a band across the bottom of the battle; the tide now
+   gets the hero's full height and this reads as a caption under it. */
 .tide-meter {
-  position: absolute; z-index: 2; left: 0; right: 0; bottom: 0;
   border-top: 1px solid var(--line);
-  background: rgba(12,10,16,.86);
+  border-bottom: 1px solid var(--line);
+  background: var(--bg3);
 }
 .tide-meter .wrap {
   display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
@@ -299,11 +302,6 @@ h2.h .a { color: var(--acc); }
      lands on the guns. */
   .hero { flex-direction: column; align-items: stretch; }
   .hero .wrap { margin: 0; padding-top: 92px; padding-bottom: 312px; }
-  /* The meter's inner element is ALSO a .hero .wrap, so the band padding above
-     lands on it too and inflates the strip to ~450px — and its translucent
-     background then covers the whole battle band, which is what made the crowd
-     look dark and half-missing. Put the strip's own padding back. */
-  .tide-meter .wrap { padding-top: 14px; padding-bottom: 14px; }
   /* Dark through the copy, then out of the way: the front and the guns sit in
      the clear, which is the whole reason the composition rotated. */
   .hero::after { background: linear-gradient(180deg,
@@ -326,8 +324,6 @@ h2.h .a { color: var(--acc); }
   .store-btn svg { width: 22px; height: 22px; }
   .store-btn small { font-size: 10px; letter-spacing: .08em; }
   .store-btn b { font-size: 15px; white-space: nowrap; }
-  /* The meter goes back to being an overlaid HUD strip (the base rule): the
-     tide walks in from behind it, and it stops eating a third of the hero. */
   .tide-meter .wrap { padding-top: 10px; padding-bottom: 10px; gap: 4px 12px; }
   .tide-meter .lbl { font-size: 11px; }
   .tide-meter .note { font-size: 11.5px; line-height: 1.35; flex-basis: 100%; }
