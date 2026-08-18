@@ -96,16 +96,23 @@ a { color: var(--acc); text-decoration-thickness: 1px; text-underline-offset: 3p
 [data-hero="live"] .tide-meter .note.still { display: none; }
 .hero::after { /* ground the copy: left vignette over the tide */
   content: ""; position: absolute; inset: 0; pointer-events: none;
-  /* The falloff has to clear the copy, not the wrap: p.sub is 34rem wide and
-     on a 1600px viewport its last line ends around 64% across, so a gradient
-     that had faded by 56% left "every kill counted" sitting on bright crowd
-     speckle. Holding the shade to ~62% and easing out by 74% keeps the line
-     readable without walling off the tide. */
+  /* The falloff has to clear the copy, not the wrap. With the copy on the left
+     gutter, p.sub's 34rem ends around 50% across on a 1600px viewport, so the
+     shade holds to ~48% and is gone by 62% — earlier than it used to be, which
+     gives the crowd back the width the centred copy was covering. */
   background: linear-gradient(100deg,
-    rgba(12,10,16,.96) 0%, rgba(12,10,16,.84) 44%,
-    rgba(12,10,16,.42) 62%, rgba(12,10,16,.06) 74%);
+    rgba(12,10,16,.96) 0%, rgba(12,10,16,.86) 30%,
+    rgba(12,10,16,.44) 48%, rgba(12,10,16,.06) 62%);
 }
 .hero .wrap { position: relative; z-index: 2; padding-top: 96px; padding-bottom: 140px; }
+/* The copy sits on the page's normal left gutter, in line with the wordmark in
+   the header — not floating in the middle of the hero. It needs saying because
+   .hero is a flex container, so its .wrap is a flex ITEM: without a width it
+   shrinks to its content (592px) and `margin: 0 auto` then centres that block,
+   which put the headline ~256px right of every other left edge on the page and
+   ran the last line of p.sub past the defended line into the crowd.
+   Direct child only: .tide-meter .wrap is also a `.hero .wrap`. */
+.hero > .wrap { width: 100%; }
 .kicker {
   font-weight: 700; font-size: 13px; letter-spacing: .16em;
   text-transform: uppercase; color: var(--gold);
