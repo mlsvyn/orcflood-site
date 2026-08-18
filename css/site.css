@@ -69,39 +69,24 @@ a { color: var(--acc); text-decoration-thickness: 1px; text-underline-offset: 3p
 .site-head.solid { position: static; background: var(--bg); border-bottom: 1px solid var(--line); }
 
 /* ---------- hero ---------- */
-/* The hero and the counter below it share ONE viewport. The hero takes whatever
-   height is left after the strip, so the counter is on screen at first paint
-   without anyone hard-coding the strip's height — it is free to grow when its
-   note wraps to two lines on a phone, and the hero simply gets less.
-   min-height rather than height: on a short viewport the copy wins and the
-   stack grows instead of the text being clipped. */
-.hero-stack { min-height: 100svh; display: flex; flex-direction: column; }
 .hero {
-  position: relative; flex: 1 1 auto;
+  position: relative; min-height: 100svh;
   display: flex; align-items: center; overflow: hidden;
   background: var(--bg3);
 }
-/* The hero has two mutually exclusive backgrounds occupying the same box, so
-   swapping between them can never shift the layout:
-     [data-hero="live"]   -> the canvas tide (WebGL, or Canvas2D fallback)
-     [data-hero="poster"] -> the real captured screenshot
-   No attribute at all means JS is off, which is the poster case too. */
-#horde { position: absolute; inset: 0; width: 100%; height: 100%; display: none; }
+/* The hero background is a real in-game capture. There used to be a WebGL orc
+   tide here with the poster as its fallback; the animation was removed, so the
+   still is simply the hero now. */
 .hero-poster {
   position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: cover; opacity: .58;
-  /* Zoom past the game's own HUD (health bar, ability rail) into the field, so
-     the still reads as the flood and not as a screenshot of a UI. */
-  transform: scale(1.5); transform-origin: 70% 46%;
+  object-fit: cover; object-position: 40% 50%; opacity: .62;
+  /* NO transform. tools/sync_site_art.py already crops inside the game's HUD at
+     native resolution and scales 2x with NEAREST, so the file is 2784px of real
+     pixels; zooming it again in CSS is precisely what made the old 1600px
+     backdrop look soft once it stopped being a backdrop and became the hero. */
+  image-rendering: pixelated;
 }
-[data-hero="live"] #horde { display: block; }
-[data-hero="live"] .hero-poster { display: none; }
-/* The live counter stays honest about what it is counting either way. */
-.tide-meter .note.live { display: none; }
-.tide-meter .note.still { display: block; }
-[data-hero="live"] .tide-meter .note.live { display: block; }
-[data-hero="live"] .tide-meter .note.still { display: none; }
-.hero::after { /* ground the copy: left vignette over the tide */
+.hero::after { /* ground the copy: left vignette over the capture */
   content: ""; position: absolute; inset: 0; pointer-events: none;
   /* The falloff has to clear the copy, not the wrap. With the copy on the left
      gutter, p.sub's 34rem ends around 50% across on a 1600px viewport, so the
@@ -149,22 +134,6 @@ h1.mega, .mega {
 /* Below the hero, in normal flow — not an overlaid strip. Overlaid, its
    background and text cut a band across the bottom of the battle; the tide now
    gets the hero's full height and this reads as a caption under it. */
-.tide-meter {
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  background: var(--bg3);
-}
-.tide-meter .wrap {
-  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
-  padding-top: 14px; padding-bottom: 14px;
-}
-.tide-meter .lbl { font-weight: 700; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--gold); }
-.tide-meter .n {
-  font-family: var(--display); font-weight: 900; font-size: 30px; color: var(--acc);
-  font-variant-numeric: tabular-nums; min-width: 5.2ch;
-}
-.tide-meter .note { font-size: 13px; color: var(--muted); }
-
 /* ---------- report sections ---------- */
 section { position: relative; }
 .report { padding: 84px 0 72px; }
@@ -295,33 +264,20 @@ h2.h .a { color: var(--acc); }
 
 /* ---------- responsive ---------- */
 @media (max-width: 900px) {
-  /* PORTRAIT COMPOSITION — the battle turns a quarter turn with the layout.
-     js/hero.js maps battle space onto the screen once (see battleMap): here the
-     defended line lies ACROSS the hero low down, the guns stand along it, and the
-     flood climbs into it from the bottom edge, so the copy takes the dark top and
-     the bottom band is left to the front.
-     THIS BREAKPOINT, not the 620px one below: between 620 and 900 the copy still
-     needs the full width, so the landscape composition put a gun behind the
-     Google Play button. js/hero.js reads this exact query through matchMedia, so
-     the two can only ever agree — do not restate 900 in the JS.
-     The renderer puts the line at 1 - 228px/heroHeight, so it needs a 228px band
-     under the copy; padding-bottom reserves 262. The extra 34 is NOT slack: a
-     gun is a disc CENTRED on the line, so it reaches ~20px above it (turretPx/2),
-     and reserving only to the line puts the turret row on the store buttons. Shrink the padding alone and the
-     copy lands on the guns — the two numbers move together (js/hero.js and
-     js/horde.js both carry the 228).
-     WHY 240 AND NOT 312: the hero and the counter share one viewport, and the
-     hero cannot shrink below its own content. At 312 the pair came to 907px on a
-     852px phone, so the counter fell below the fold at first paint. */
+  /* STACKED HERO. The copy takes the dark top and the capture shows below it.
+     This breakpoint, not the 620px one: between 620 and 900 the copy still needs
+     the full width, so side-by-side put the headline over the firing line.
+     The bottom padding used to reserve a 262px band for an animated battle that
+     was rendered under the copy; with a still there is nothing to reserve for,
+     so it is back to breathing room. */
   .hero { flex-direction: column; align-items: stretch; }
-  .hero .wrap { margin: 0; padding-top: 80px; padding-bottom: 262px; }
-  /* Dark through the copy, then out of the way: the front and the guns sit in
-     the clear, which is the whole reason the composition rotated. */
+  .hero .wrap { margin: 0; padding-top: 80px; padding-bottom: 96px; }
+  /* Dark through the copy, then out of the way, so the capture is visible below. */
   .hero::after { background: linear-gradient(180deg,
     rgba(12,10,16,.94) 0%, rgba(12,10,16,.90) 30%, rgba(12,10,16,.78) 46%,
     rgba(12,10,16,.30) 60%, rgba(12,10,16,.06) 72%, rgba(12,10,16,.02) 100%); }
-  /* The still fallback crops into the field the same way the live one frames it. */
-  .hero-poster { transform: scale(2.1); transform-origin: 64% 52%; }
+  /* Portrait cover shows a narrow vertical slice, so aim it at the columns. */
+  .hero-poster { object-position: 46% 50%; }
   .duo, .duo.rev { grid-template-columns: 1fr; gap: 28px; }
   .duo.rev .shot { order: 2; }
   .field { grid-template-columns: 1fr; gap: 6px; }
@@ -337,20 +293,9 @@ h2.h .a { color: var(--acc); }
   .store-btn svg { width: 22px; height: 22px; }
   .store-btn small { font-size: 10px; letter-spacing: .08em; }
   .store-btn b { font-size: 15px; white-space: nowrap; }
-  .tide-meter .wrap { padding-top: 10px; padding-bottom: 10px; gap: 4px 12px; }
-  .tide-meter .lbl { font-size: 11px; }
-  .tide-meter .note { font-size: 11.5px; line-height: 1.35; flex-basis: 100%; }
   .report { padding: 72px 0 60px; }
   .band { clip-path: polygon(0 26px, 100% 0, 100% 100%, 0 100%); padding-top: 70px; }
-  .tide-meter .n { font-size: 24px; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  /* Safety net only — js/hero.js is the authority and refuses to start a loop
-     at all under reduced motion. This just guarantees the still is what shows
-     if a stale [data-hero="live"] stamp ever survives. */
-  [data-hero="live"] #horde { display: none; }
-  [data-hero="live"] .hero-poster { display: block; }
-  [data-hero="live"] .tide-meter .note.live { display: none; }
-  [data-hero="live"] .tide-meter .note.still { display: block; }
 }

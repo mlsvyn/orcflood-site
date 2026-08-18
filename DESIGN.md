@@ -45,10 +45,11 @@ Components:
 - Radii 12-14px cards, pills only for chips/buttons. Elevation via shadow
   OR border (sole exception: capture wells, above).
 
-Motion: one authored moment — the hero canvas horde tide (dots flow, thin
-defended line fires tracers; honest on-page orc counter). Everything else
-static except restrained hovers. `prefers-reduced-motion`: canvas renders a
-single still frame.
+Motion: none. The hero was an animated canvas horde until 2026-08-18 — a
+live tide with an honest on-page orc counter — and it never beat a real
+in-game frame at conveying scale, so it is now one full-bleed still and the
+site ships zero JavaScript. Restrained hovers only; `prefers-reduced-motion`
+has nothing left to turn off. Do not reintroduce a hero canvas.
 
 Bans checked against the world: no gradient text, no glass, no card grids
 of icon+heading+text, no section numbering, no gray secondary text on
