@@ -77,7 +77,7 @@ export function createCanvasTide(canvas) {
             // Height-only change (mobile URL bar): the buffer is normalised, so
             // resizing the backing store is the rest of the job.
             if (!widthChanged) return;
-            kill = portrait ? 0.13 : 0.095;   // matches the GPU tide's layout
+            kill = portrait ? 0.070 : 0.048;  // matches the GPU tide's layout
             orcPx = portrait ? 3.2 : 2.6;
             N = Math.max(1200, Math.min(MAX, Math.round((cssW * cssH) / (portrait ? 95 : 150))));
         },

@@ -172,9 +172,14 @@ void main() {
        hold is clamped to >= 0 and the whole offset is added, never subtracted,
        so the front CANNOT cross the trench however the terms land. */
     float jo   = fract(seed.w * 0.31830989 * 17.0);
-    float hold = clamp(0.74 * holdField(seed.z, uTime)
-                     + 0.46 * trait.z
-                     + 0.30 * jo * jo - 0.27, 0.0, 1.0);
+    /* Weighted so the MEDIAN body is in contact and only a minority stand off.
+       The first cut let the coherent term alone reach 1.0, and since it is a
+       field the whole lane stood off together — a 160px band of empty ground
+       between the guns and the horde, which read as the crowd being afraid of
+       the line rather than pressing on it. */
+    float hold = clamp(0.52 * holdField(seed.z, uTime)
+                     + 0.30 * trait.z
+                     + 0.26 * jo * jo - 0.20, 0.0, 1.0);
     float front = uLineX + uKill * hold;
     float x = mix(1.07, front, e);
 
@@ -568,7 +573,11 @@ function layout(cssW, cssH) {
     return {
         portrait: portrait,
         lineX: 0.6,
-        kill: portrait ? 0.13 : 0.095,
+        /* Depth of the kill band as a fraction of the march axis. Halved from
+           the first cut: at a 1700px hero, 0.095 meant the front could stand
+           161px off the guns, and a whole lane doing it at once left a dead
+           band. ~80px is enough for a ragged edge with real pockets. */
+        kill: portrait ? 0.070 : 0.048,
         lineAt: lineAt,
         /* Where the far muster (battle x = 1.07) lands. Just off the bottom edge
            in portrait, so bodies walk in from behind the meter panel rather than
