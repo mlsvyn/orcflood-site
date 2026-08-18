@@ -131,9 +131,6 @@ h1.mega, .mega {
 .store-btn:hover small { color: var(--on-acc-2); }
 .store-btn:hover svg { fill: var(--on-acc); }
 
-/* Below the hero, in normal flow — not an overlaid strip. Overlaid, its
-   background and text cut a band across the bottom of the battle; the tide now
-   gets the hero's full height and this reads as a caption under it. */
 /* ---------- report sections ---------- */
 section { position: relative; }
 .report { padding: 84px 0 72px; }
